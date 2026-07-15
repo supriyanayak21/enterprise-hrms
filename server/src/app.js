@@ -1,11 +1,36 @@
 const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
+const morgan = require("morgan");
+
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(cors());
+app.use(helmet());
+app.use(cookieParser());
+app.use(morgan("dev"));
 
 app.get("/", (req, res) => {
-  res.send("Enterprise HRMS Backend Running...");
+  res.json({
+    success: true,
+    message: "Enterprise HRMS Backend Running...",
+  });
 });
+
+app.get("/error", (req, res, next) => {
+  const error = new Error("This is a test error");
+  error.statusCode = 400;
+  next(error);
+});
+
+
+// Error Handler (Last Middleware)
+app.use(errorHandler);
 
 module.exports = app;
