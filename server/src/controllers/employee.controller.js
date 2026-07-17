@@ -108,8 +108,15 @@ const createEmployee = async (req, res, next) => {
 const getAllEmployees = async (req, res, next) => {
   try {
 
+    // Search
     const search = req.query.search || "";
 
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Query
     const query = {
       $or: [
         { employeeId: { $regex: search, $options: "i" } },
@@ -122,11 +129,17 @@ const getAllEmployees = async (req, res, next) => {
 
     const employees = await Employee.find(query)
       .populate("user", "fullName email role")
+      .skip(skip)
+      .limit(limit)
       .sort({ createdAt: -1 });
+
+    const totalEmployees = await Employee.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      count: employees.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalEmployees / limit),
+      totalEmployees,
       employees,
     });
 
