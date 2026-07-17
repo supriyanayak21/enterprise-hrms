@@ -1,6 +1,8 @@
 const express = require("express");
 
-const { createEmployee } = require("../controllers/employee.controller");
+const { createEmployee,
+        getAllEmployees,
+ } = require("../controllers/employee.controller");
 
 const protect = require("../middleware/auth.middleware");
 const authorizeRoles = require("../middleware/role.middleware");
@@ -13,6 +15,13 @@ router.post(
   protect,
   authorizeRoles("Admin", "HR"),
   createEmployee
+);
+//get all employees
+router.get(
+  "/",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getAllEmployees
 );
 
 module.exports = router;

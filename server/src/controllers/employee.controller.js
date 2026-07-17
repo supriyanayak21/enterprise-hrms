@@ -54,7 +54,7 @@ const createEmployee = async (req, res, next) => {
     });
     }
 
-    
+
     // Check if employee already exists for this user
     const existingEmployee = await Employee.findOne({ user });
 
@@ -103,6 +103,26 @@ const createEmployee = async (req, res, next) => {
   }
 };
 
+
+// Get All Employees
+const getAllEmployees = async (req, res, next) => {
+  try {
+    const employees = await Employee.find()
+      .populate("user", "fullName email role")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: employees.length,
+      employees,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createEmployee,
+  getAllEmployees,
 };
