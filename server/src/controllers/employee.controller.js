@@ -107,7 +107,20 @@ const createEmployee = async (req, res, next) => {
 // Get All Employees
 const getAllEmployees = async (req, res, next) => {
   try {
-    const employees = await Employee.find()
+
+    const search = req.query.search || "";
+
+    const query = {
+      $or: [
+        { employeeId: { $regex: search, $options: "i" } },
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { department: { $regex: search, $options: "i" } },
+        { designation: { $regex: search, $options: "i" } },
+      ],
+    };
+
+    const employees = await Employee.find(query)
       .populate("user", "fullName email role")
       .sort({ createdAt: -1 });
 
@@ -116,6 +129,7 @@ const getAllEmployees = async (req, res, next) => {
       count: employees.length,
       employees,
     });
+
   } catch (error) {
     next(error);
   }
