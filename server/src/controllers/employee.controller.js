@@ -127,11 +127,27 @@ const getAllEmployees = async (req, res, next) => {
       ],
     };
 
+     // Add filters here 👇
+    if (req.query.department) {
+      query.department = req.query.department;
+    }
+
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    if (req.query.designation) {
+      query.designation = req.query.designation;
+    }
+
+     // 4. Sorting
+    const sort = req.query.sort || "-createdAt";
+
     const employees = await Employee.find(query)
       .populate("user", "fullName email role")
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort(sort);
 
     const totalEmployees = await Employee.countDocuments(query);
 
