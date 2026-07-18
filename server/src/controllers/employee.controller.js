@@ -1,5 +1,6 @@
 const Employee = require("../models/employee.model");
 const User = require("../models/user.model");
+const generateEmployeeId = require("../utils/generateEmployeeId");
 
 // Create Employee
 const createEmployee = async (req, res, next) => {
@@ -66,9 +67,7 @@ const createEmployee = async (req, res, next) => {
     }
 
     // Generate Employee ID
-    const count = await Employee.countDocuments();
-
-    const employeeId = `EMP${String(count + 1).padStart(4, "0")}`;
+   const employeeId = await generateEmployeeId();
 
     // Create Employee
     const employee = await Employee.create({
