@@ -70,14 +70,14 @@ const createEmployee = async (req, res, next) => {
     // Generate Employee ID
    const employeeId = await generateEmployeeId();
 
-   const departmentExists = await Department.findById(department);
+  const departmentExists = await Department.findById(department);
 
-  if (!departmentExists) {
-    return res.status(404).json({
-        success: false,
-        message: "Department not found",
-    });
-  }
+if (!departmentExists) {
+  return res.status(404).json({
+    success: false,
+    message: "Department not found",
+  });
+}
 
     // Create Employee
     const employee = await Employee.create({
