@@ -7,6 +7,8 @@ const morgan = require("morgan");
 const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/auth.routes");
 const employeeRoutes = require("./routes/employee.routes");
+const departmentRoutes = require("./routes/department.routes");
+
 
 
 const app = express();
@@ -16,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/employees", employeeRoutes);
+app.use("/api/v1/departments", departmentRoutes);
 
 
 app.use(cors());
