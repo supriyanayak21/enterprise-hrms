@@ -52,6 +52,151 @@ const createDepartment = async (req, res, next) => {
   }
 };
 
+
+// Get All Departments
+const getAllDepartments = async (req, res, next) => {
+  try {
+    const search = req.query.search || "";
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    // Search
+    if (search) {
+      query.$or = [
+        {
+          departmentName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          departmentCode: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ];
+    }
+
+    // Filtering
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    // Sorting
+    const sort = req.query.sort || "-createdAt";
+
+    const departments = await Department.find(query)
+      .populate("manager", "firstName lastName employeeId")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const totalDepartments =
+      await Department.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartments / limit),
+      totalDepartments,
+      departments,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const getDepartmentById = async (req, res, next) => {
+  try {
+
+    const department = await Department.findById(req.params.id)
+      .populate("manager", "firstName lastName employeeId");
+
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: "Department not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      department,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const updateDepartment = async (req, res, next) => {
+  try {
+
+    const department = await Department.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: "Department not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Department updated successfully",
+      department,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const deleteDepartment = async (req, res, next) => {
+  try {
+
+    const department = await Department.findById(req.params.id);
+
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: "Department not found",
+      });
+    }
+
+    await department.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Department deleted successfully",
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createDepartment,
+    getAllDepartments,
+    getDepartmentById,
+    updateDepartment,
+    deleteDepartment,
+
 };
