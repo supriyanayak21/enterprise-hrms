@@ -1,6 +1,7 @@
 const Employee = require("../models/employee.model");
 const User = require("../models/user.model");
 const generateEmployeeId = require("../utils/generateEmployeeId");
+const Department = require("../models/department.model");
 
 // Create Employee
 const createEmployee = async (req, res, next) => {
@@ -69,6 +70,15 @@ const createEmployee = async (req, res, next) => {
     // Generate Employee ID
    const employeeId = await generateEmployeeId();
 
+   const departmentExists = await Department.findById(department);
+
+  if (!departmentExists) {
+    return res.status(404).json({
+        success: false,
+        message: "Department not found",
+    });
+  }
+
     // Create Employee
     const employee = await Employee.create({
       user,
@@ -90,6 +100,7 @@ const createEmployee = async (req, res, next) => {
       emergencyContactName,
       emergencyContactPhone,
     });
+
 
     res.status(201).json({
       success: true,
@@ -143,10 +154,14 @@ const getAllEmployees = async (req, res, next) => {
     const sort = req.query.sort || "-createdAt";
 
     const employees = await Employee.find(query)
-      .populate("user", "fullName email role")
-      .skip(skip)
-      .limit(limit)
-      .sort(sort);
+   .populate("user","fullName email role")
+   .populate(
+    "department",
+    "departmentCode departmentName"
+    )
+   .sort(sort)
+   .skip(skip)
+   .limit(limit);
 
     const totalEmployees = await Employee.countDocuments(query);
 
@@ -190,6 +205,23 @@ const getEmployeeById = async (req, res, next) => {
 // Update Employee
 const updateEmployee = async (req, res, next) => {
   try {
+    if(req.body.department){
+
+    const departmentExists =
+    await Department.findById(req.body.department);
+
+    if(!departmentExists){
+
+        return res.status(404).json({
+
+            success:false,
+            message:"Department not found"
+
+        });
+
+    }
+
+    }
 
     const employee = await Employee.findById(req.params.id);
 

@@ -1,6 +1,7 @@
 const Department = require("../models/department.model");
 const generateDepartmentCode = require("../utils/generateDepartmentCode");
 
+
 // Create Department
 const createDepartment = async (req, res, next) => {
   try {
@@ -177,6 +178,18 @@ const deleteDepartment = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Department not found",
+      });
+    }
+
+    const employeeCount = await Employee.countDocuments({
+      department: department._id,
+    });
+
+    if (employeeCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Department cannot be deleted because employees are assigned to it.",
       });
     }
 
