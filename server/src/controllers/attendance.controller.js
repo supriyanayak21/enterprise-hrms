@@ -150,7 +150,105 @@ const checkOut = async (req, res, next) => {
 };
 
 // Get All
-const getAllAttendance = async (req, res, next) => {};
+const getAllAttendance = async (req, res, next) => {
+  try {
+    // Search
+    const search = req.query.search || "";
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting
+    const sort = req.query.sort || "-date";
+
+    // Filtering
+    const filter = {};
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    // Date Filter
+    if (req.query.date) {
+      const selectedDate = new Date(req.query.date);
+
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filter.date = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+
+    // Search Employee
+    let employeeFilter = {};
+
+    if (search) {
+      const employees = await Employee.find({
+        $or: [
+          {
+            employeeId: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            firstName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            lastName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+        ],
+      });
+
+      employeeFilter.employee = {
+        $in: employees.map((emp) => emp._id),
+      };
+    }
+
+    const query = {
+      ...filter,
+      ...employeeFilter,
+    };
+
+    const attendance = await Attendance.find(query)
+      .populate({
+        path: "employee",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const totalAttendance = await Attendance.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalAttendance / limit),
+      totalAttendance,
+      attendance,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Get By ID
 const getAttendanceById = async (req, res, next) => {};
