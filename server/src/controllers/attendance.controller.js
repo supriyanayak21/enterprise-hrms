@@ -88,7 +88,66 @@ const checkIn = async (req, res, next) => {
 };
 
 // Check Out
-const checkOut = async (req, res, next) => {};
+const checkOut = async (req, res, next) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found.",
+      });
+    }
+
+    // Prevent checkout without check-in
+    if (!attendance.checkIn) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee has not checked in.",
+      });
+    }
+
+    // Prevent multiple checkouts
+    if (attendance.checkOut) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee has already checked out.",
+      });
+    }
+
+    const now = new Date();
+
+    attendance.checkOut = now;
+
+    // Calculate working hours
+    const workingMilliseconds =
+      attendance.checkOut.getTime() - attendance.checkIn.getTime();
+
+    const workingHours = workingMilliseconds / (1000 * 60 * 60);
+
+    attendance.workingHours = Number(workingHours.toFixed(2));
+
+    await attendance.save();
+
+    await attendance.populate({
+      path: "employee",
+      select: "employeeId firstName lastName department",
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Check-out successful.",
+      attendance,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Get All
 const getAllAttendance = async (req, res, next) => {};
