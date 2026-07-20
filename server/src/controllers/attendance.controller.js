@@ -361,10 +361,212 @@ const getEmployeeAttendanceHistory = async (req, res, next) => {
   }
 };
 
+
+const getMonthlyAttendanceReport = async (req, res, next) => {
+  try {
+    const { month, year, department, status } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "Month and Year are required.",
+      });
+    }
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    // Employee Filter
+    const employeeFilter = {};
+
+    if (department) {
+      employeeFilter.department = department;
+    }
+
+    const employees = await Employee.find(employeeFilter)
+      .populate("department", "departmentCode departmentName");
+
+    const report = [];
+
+    for (const employee of employees) {
+
+      const attendanceFilter = {
+        employee: employee._id,
+        date: {
+          $gte: startDate,
+          $lt: endDate,
+        },
+      };
+
+      if (status) {
+        attendanceFilter.status = status;
+      }
+
+      const attendance = await Attendance.find(attendanceFilter);
+
+      const totalDays = attendance.length;
+
+      const present = attendance.filter(
+        item => item.status === "Present"
+      ).length;
+
+      const absent = attendance.filter(
+        item => item.status === "Absent"
+      ).length;
+
+      const late = attendance.filter(
+        item => item.status === "Late"
+      ).length;
+
+      const halfDay = attendance.filter(
+        item => item.status === "Half-Day"
+      ).length;
+
+      const totalWorkingHours = attendance.reduce(
+        (sum, item) => sum + item.workingHours,
+        0
+      );
+
+      report.push({
+
+        employeeId: employee.employeeId,
+
+        employeeName:
+          `${employee.firstName} ${employee.lastName}`,
+
+        designation: employee.designation,
+
+        department: employee.department,
+
+        totalDays,
+
+        present,
+
+        absent,
+
+        late,
+
+        halfDay,
+
+        totalWorkingHours:
+          Number(totalWorkingHours.toFixed(2)),
+
+        averageWorkingHours:
+          totalDays
+            ? Number(
+                (totalWorkingHours / totalDays).toFixed(2)
+              )
+            : 0
+
+      });
+
+    }
+
+    res.status(200).json({
+
+      success: true,
+
+      month: Number(month),
+
+      year: Number(year),
+
+      totalEmployees: employees.length,
+
+      report
+
+    });
+
+  } catch (error) {
+
+    next(error);
+
+  }
+};
+
+
+const getAttendanceDashboardSummary = async (req, res, next) => {
+  try {
+    const today = new Date();
+
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Total Employees
+    const totalEmployees = await Employee.countDocuments();
+
+    // Today's Attendance
+    const attendance = await Attendance.find({
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+    });
+
+    const present = attendance.filter(
+      (item) => item.status === "Present"
+    ).length;
+
+    const late = attendance.filter(
+      (item) => item.status === "Late"
+    ).length;
+
+    const absent = attendance.filter(
+      (item) => item.status === "Absent"
+    ).length;
+
+    const halfDay = attendance.filter(
+      (item) => item.status === "Half-Day"
+    ).length;
+
+    const checkedInEmployees = attendance.length;
+
+    const attendancePercentage =
+      totalEmployees > 0
+        ? Number(
+            ((checkedInEmployees / totalEmployees) * 100).toFixed(2)
+          )
+        : 0;
+
+    const totalWorkingHours = attendance.reduce(
+      (sum, item) => sum + (item.workingHours || 0),
+      0
+    );
+
+    const averageWorkingHours =
+      checkedInEmployees > 0
+        ? Number(
+            (totalWorkingHours / checkedInEmployees).toFixed(2)
+          )
+        : 0;
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        totalEmployees,
+        checkedInEmployees,
+        present,
+        late,
+        absent,
+        halfDay,
+        attendancePercentage,
+        averageWorkingHours,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   checkIn,
   checkOut,
   getAllAttendance,
   getAttendanceById,
   getEmployeeAttendanceHistory,
+  getMonthlyAttendanceReport,
+  getAttendanceDashboardSummary,
 };

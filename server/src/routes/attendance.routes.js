@@ -6,6 +6,9 @@ const {
   getAllAttendance,
   getAttendanceById,
   getEmployeeAttendanceHistory,
+  getMonthlyAttendanceReport,
+  getAttendanceDashboardSummary,
+
 } = require("../controllers/attendance.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -35,17 +38,33 @@ router.get(
 );
 
 router.get(
+  "/employee/:employeeId",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getEmployeeAttendanceHistory
+);
+
+router.get(
+    "/monthly-report",
+    protect,
+    authorizeRoles("Admin","HR"),
+    getMonthlyAttendanceReport
+);
+
+router.get(
+  "/dashboard-summary",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getAttendanceDashboardSummary
+);
+
+router.get(
   "/:id",
   protect,
   authorizeRoles("Admin", "HR"),
   getAttendanceById
 );
 
-router.get(
-  "/employee/:employeeId",
-  protect,
-  authorizeRoles("Admin", "HR"),
-  getEmployeeAttendanceHistory
-);
+
 
 module.exports = router;
