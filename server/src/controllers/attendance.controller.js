@@ -224,16 +224,18 @@ const getAllAttendance = async (req, res, next) => {
     };
 
     const attendance = await Attendance.find(query)
-      .populate({
+    .populate({
         path: "employee",
+        select: "employeeId firstName lastName department",
         populate: {
-          path: "department",
-          select: "departmentCode departmentName",
-        },
-      })
-      .sort(sort)
-      .skip(skip)
-      .limit(limit);
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
+      
 
     const totalAttendance = await Attendance.countDocuments(query);
 
@@ -251,7 +253,34 @@ const getAllAttendance = async (req, res, next) => {
 };
 
 // Get By ID
-const getAttendanceById = async (req, res, next) => {};
+const getAttendanceById = async (req, res, next) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id)
+      .populate({
+        path: "employee",
+        select: "employeeId firstName lastName department designation",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      });
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      attendance,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   checkIn,
