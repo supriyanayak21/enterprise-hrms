@@ -149,6 +149,8 @@ const checkOut = async (req, res, next) => {
   }
 };
 
+
+
 // Get All
 const getAllAttendance = async (req, res, next) => {
   try {
@@ -282,9 +284,87 @@ const getAttendanceById = async (req, res, next) => {
   }
 };
 
+
+
+const getEmployeeAttendanceHistory = async (req, res, next) => {
+  try {
+    const { employeeId } = req.params;
+
+    // Check employee exists
+    const employee = await Employee.findById(employeeId);
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found.",
+      });
+    }
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting
+    const sort = req.query.sort || "-date";
+
+    // Filter
+    const filter = {
+      employee: employeeId,
+    };
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    // Date Filter
+    if (req.query.date) {
+      const selectedDate = new Date(req.query.date);
+
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filter.date = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+
+    const attendance = await Attendance.find(filter)
+      .populate({
+        path: "employee",
+        select: "employeeId firstName lastName department designation",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const totalAttendance = await Attendance.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalAttendance / limit),
+      totalAttendance,
+      attendance,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
   getAllAttendance,
   getAttendanceById,
+  getEmployeeAttendanceHistory,
 };

@@ -5,6 +5,7 @@ const {
   checkOut,
   getAllAttendance,
   getAttendanceById,
+  getEmployeeAttendanceHistory,
 } = require("../controllers/attendance.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -38,6 +39,13 @@ router.get(
   protect,
   authorizeRoles("Admin", "HR"),
   getAttendanceById
+);
+
+router.get(
+  "/employee/:employeeId",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getEmployeeAttendanceHistory
 );
 
 module.exports = router;
