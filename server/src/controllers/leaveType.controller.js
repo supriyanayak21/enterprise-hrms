@@ -117,10 +117,44 @@ const getAllLeaveTypes = async (req, res, next) => {
   }
 };
 
+// ===========================================
+// Get Leave Type By ID
+// ===========================================
+const getLeaveTypeById = async (req, res, next) => {
+  try {
+    const mongoose = require("mongoose");
 
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({
+    success: false,
+    message: "Invalid Leave Type ID.",
+    });
+    }
+
+
+    const leaveType = await LeaveType.findById(req.params.id);
+
+    if (!leaveType) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave type not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      leaveType,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 module.exports = {
   createLeaveType,
   getAllLeaveTypes,
+  getLeaveTypeById,
+
 };
