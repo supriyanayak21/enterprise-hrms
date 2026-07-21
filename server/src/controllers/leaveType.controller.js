@@ -66,6 +66,61 @@ const createLeaveType = async (req, res, next) => {
   }
 };
 
+const getAllLeaveTypes = async (req, res, next) => {
+  try {
+    // Search
+    const search = req.query.search || "";
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting
+    const sort = req.query.sort || "-createdAt";
+
+    // Filter
+    const filter = {};
+
+    if (search) {
+      filter.leaveName = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    if (req.query.isPaid !== undefined) {
+      filter.isPaid = req.query.isPaid === "true";
+    }
+
+    const leaveTypes = await LeaveType.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const totalLeaveTypes = await LeaveType.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalLeaveTypes / limit),
+      totalLeaveTypes,
+      leaveTypes,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
 module.exports = {
   createLeaveType,
+  getAllLeaveTypes,
 };
