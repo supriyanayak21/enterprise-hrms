@@ -9,6 +9,7 @@ const authRoutes = require("./routes/auth.routes");
 const employeeRoutes = require("./routes/employee.routes");
 const departmentRoutes = require("./routes/department.routes");
 const attendanceRoutes = require("./routes/attendance.routes");
+const leaveTypeRoutes = require("./routes/leaveType.routes");
 
 
 
@@ -21,6 +22,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/employees", employeeRoutes);
 app.use("/api/v1/departments", departmentRoutes);
 app.use("/api/v1/attendance", attendanceRoutes);
+app.use("/api/v1/leave-types", leaveTypeRoutes);
 
 
 app.use(cors());
