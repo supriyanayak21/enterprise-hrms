@@ -1,6 +1,6 @@
 const LeaveType = require("../models/leaveType.model");
 const Counter = require("../models/counter.model");
-
+const mongoose = require("mongoose");
 // ===============================
 // Create Leave Type
 // ===============================
@@ -66,6 +66,8 @@ const createLeaveType = async (req, res, next) => {
   }
 };
 
+
+
 const getAllLeaveTypes = async (req, res, next) => {
   try {
     // Search
@@ -122,7 +124,7 @@ const getAllLeaveTypes = async (req, res, next) => {
 // ===========================================
 const getLeaveTypeById = async (req, res, next) => {
   try {
-    const mongoose = require("mongoose");
+    
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({
@@ -152,9 +154,87 @@ const getLeaveTypeById = async (req, res, next) => {
 };
 
 
+
+
+// ===========================================
+// Update Leave Type
+// ===========================================
+const updateLeaveType = async (req, res, next) => {
+  try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Leave Type ID.",
+      });
+    }
+
+    const leaveType = await LeaveType.findById(req.params.id);
+
+    if (!leaveType) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave type not found.",
+      });
+    }
+
+    const {
+      leaveName,
+      description,
+      maxDaysPerYear,
+      isPaid,
+      status,
+    } = req.body;
+
+    // Required field validation
+    if (!leaveName || !maxDaysPerYear) {
+      return res.status(400).json({
+        success: false,
+        message: "Leave name and maximum days per year are required.",
+      });
+    }
+
+    // Check duplicate leave name
+    const existingLeaveType = await LeaveType.findOne({
+      leaveName: {
+        $regex: `^${leaveName.trim()}$`,
+        $options: "i",
+      },
+      _id: { $ne: req.params.id },
+    });
+
+    if (existingLeaveType) {
+      return res.status(409).json({
+        success: false,
+        message: "Leave type already exists.",
+      });
+    }
+
+    // Update fields
+    leaveType.leaveName = leaveName;
+    leaveType.description = description;
+    leaveType.maxDaysPerYear = maxDaysPerYear;
+    leaveType.isPaid = isPaid;
+    leaveType.status = status;
+
+    await leaveType.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Leave type updated successfully.",
+      leaveType,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createLeaveType,
   getAllLeaveTypes,
   getLeaveTypeById,
+  updateLeaveType,
 
 };
