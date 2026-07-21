@@ -4,7 +4,8 @@ const router = express.Router();
 
 const { applyLeave,
     getAllLeaves,
-    getLeaveById
+    getLeaveById,
+    updateLeave
  } = require("../controllers/leave.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -24,11 +25,21 @@ router.get(
   getLeaveById
 );
 
+
+
 router.get(
   "/",
   protect,
   authorizeRoles("HR", "Admin"),
   getAllLeaves
+);
+
+
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("Employee", "HR", "Admin"),
+  updateLeave
 );
 
 module.exports = router;

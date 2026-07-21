@@ -255,10 +255,140 @@ const getLeaveById = async (req, res, next) => {
 
 
 
+// ===========================================
+// Update Leave
+// ===========================================
+const updateLeave = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Leave ID.",
+      });
+    }
+
+    const leave = await Leave.findById(req.params.id);
+
+    if (!leave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found.",
+      });
+    }
+
+    // Only Pending leave can be updated
+    if (leave.status !== "Pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending leave requests can be updated.",
+      });
+    }
+
+    const {
+      employee,
+      leaveType,
+      startDate,
+      endDate,
+      reason,
+    } = req.body;
+
+    // Required fields
+    if (
+      !employee ||
+      !leaveType ||
+      !startDate ||
+      !endDate ||
+      !reason
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
+    }
+
+    // Employee validation
+    const employeeExists = await Employee.findById(employee);
+
+    if (!employeeExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found.",
+      });
+    }
+
+    // Leave type validation
+    const leaveTypeExists = await LeaveType.findById(leaveType);
+
+    if (!leaveTypeExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave type not found.",
+      });
+    }
+
+    if (leaveTypeExists.status !== "Active") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected leave type is inactive.",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date cannot be after end date.",
+      });
+    }
+
+    // Calculate total days
+    const totalDays =
+      Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Overlapping validation (ignore current leave)
+    const overlappingLeave = await Leave.findOne({
+      _id: { $ne: req.params.id },
+      employee,
+      status: { $ne: "Rejected" },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    });
+
+    if (overlappingLeave) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee already has another leave during this period.",
+      });
+    }
+
+    // Update fields
+    leave.employee = employee;
+    leave.leaveType = leaveType;
+    leave.startDate = start;
+    leave.endDate = end;
+    leave.totalDays = totalDays;
+    leave.reason = reason;
+
+    await leave.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Leave updated successfully.",
+      leave,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 
 module.exports = {
   applyLeave,
     getAllLeaves,
     getLeaveById,
+    updateLeave
 };
