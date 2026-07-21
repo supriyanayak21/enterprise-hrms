@@ -231,10 +231,67 @@ const updateLeaveType = async (req, res, next) => {
 };
 
 
+// ===========================================
+// Delete Leave Type
+// ===========================================
+const deleteLeaveType = async (req, res, next) => {
+  try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Leave Type ID.",
+      });
+    }
+
+    const leaveType = await LeaveType.findById(req.params.id);
+
+    if (!leaveType) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave type not found.",
+      });
+    }
+
+    // Enterprise Validation
+    // Uncomment this after creating Leave Model
+
+    /*
+    const leaveExists = await Leave.exists({
+      leaveType: req.params.id,
+    });
+
+    if (leaveExists) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot delete this leave type because it is already assigned to leave records.",
+      });
+    }
+    */
+
+    await leaveType.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Leave type deleted successfully.",
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
+
+
 module.exports = {
   createLeaveType,
   getAllLeaveTypes,
   getLeaveTypeById,
   updateLeaveType,
+    deleteLeaveType,
 
 };

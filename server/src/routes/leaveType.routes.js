@@ -5,7 +5,8 @@ const router = express.Router();
 const { createLeaveType,
         getAllLeaveTypes,
         getLeaveTypeById,
-        updateLeaveType
+        updateLeaveType,
+        deleteLeaveType
  } = require("../controllers/leaveType.controller");
 const protect = require("../middleware/auth.middleware");
 const authorizeRoles = require("../middleware/role.middleware");
@@ -29,6 +30,13 @@ router.put(
   protect,
   authorizeRoles("Admin", "HR"),
   updateLeaveType
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  deleteLeaveType
 );
 
 router.get(
