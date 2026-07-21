@@ -509,11 +509,144 @@ const approveLeave = async (req, res, next) => {
 };
 
 
+// ==========================================
+// Reject Leave
+// ==========================================
+const rejectLeave = async (req, res, next) => {
+  try {
+
+    // ==========================================
+    // Validate Leave Request ID
+    // ==========================================
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Leave Request ID.",
+      });
+    }
+
+    // ==========================================
+    // Find Leave Request
+    // ==========================================
+    const leave = await Leave.findById(req.params.id);
+
+    if (!leave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found.",
+      });
+    }
+
+    // ==========================================
+    // Validate Leave Status
+    // ==========================================
+    if (leave.status !== "Pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Leave request has already been ${leave.status.toLowerCase()}.`,
+      });
+    }
+
+    // ==========================================
+    // Validate Employee
+    // ==========================================
+    const employee = await Employee.findById(leave.employee)
+      .populate("department");
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found.",
+      });
+    }
+
+    if (employee.status !== "Active") {
+      return res.status(400).json({
+        success: false,
+        message: "Employee is inactive.",
+      });
+    }
+
+    // ==========================================
+    // Validate Leave Type
+    // ==========================================
+    const leaveType = await LeaveType.findById(leave.leaveType);
+
+    if (!leaveType) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave type not found.",
+      });
+    }
+
+    if (leaveType.status !== "Active") {
+      return res.status(400).json({
+        success: false,
+        message: "Leave type is inactive.",
+      });
+    }
+
+    // ==========================================
+    // Remarks Required
+    // ==========================================
+    const { remarks } = req.body;
+
+    if (!remarks || remarks.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection remarks are required.",
+      });
+    }
+
+    // ==========================================
+    // Reject Leave
+    // ==========================================
+    leave.status = "Rejected";
+    leave.approvedBy = req.user._id;
+    leave.approvalDate = new Date();
+    leave.remarks = remarks.trim();
+
+    await leave.save();
+
+    // ==========================================
+    // Populate Response
+    // ==========================================
+    const rejectedLeave = await Leave.findById(leave._id)
+      .populate({
+        path: "employee",
+        select: "employeeId firstName lastName designation department",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      })
+      .populate({
+        path: "leaveType",
+        select: "leaveCode leaveName",
+      })
+      .populate({
+        path: "approvedBy",
+        select: "fullName email role",
+      });
+
+    res.status(200).json({
+      success: true,
+      message: "Leave rejected successfully.",
+      leave: rejectedLeave,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 module.exports = {
   applyLeave,
     getAllLeaves,
     getLeaveById,
     updateLeave,
-    approveLeave
+    approveLeave,
+    rejectLeave,
 };

@@ -6,7 +6,8 @@ const { applyLeave,
     getAllLeaves,
     getLeaveById,
     updateLeave,
-    approveLeave
+    approveLeave,
+    rejectLeave
  } = require("../controllers/leave.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -50,7 +51,12 @@ router.put(
     approveLeave
 );
 
-
+router.put(
+  "/:id/reject",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  rejectLeave
+);
 
 
 module.exports = router;
