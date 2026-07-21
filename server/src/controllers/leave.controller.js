@@ -124,6 +124,141 @@ const applyLeave = async (req, res, next) => {
   }
 };
 
+
+// ===========================================
+// Get All Leave Requests
+// ===========================================
+const getAllLeaves = async (req, res, next) => {
+  try {
+    // Search & Pagination
+    const search = req.query.search || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting
+    const sort = req.query.sort || "-createdAt";
+
+    // Filters
+    const filter = {};
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    if (req.query.leaveType) {
+      filter.leaveType = req.query.leaveType;
+    }
+
+    if (req.query.employee) {
+      filter.employee = req.query.employee;
+    }
+
+    // Search Employees
+    if (search) {
+      const employees = await Employee.find({
+        $or: [
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { employeeId: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+
+      const employeeIds = employees.map((emp) => emp._id);
+
+      filter.$or = [
+        { leaveId: { $regex: search, $options: "i" } },
+        { employee: { $in: employeeIds } },
+      ];
+    }
+
+    // Fetch Leave Requests
+    const leaves = await Leave.find(filter)
+      .populate({
+        path: "employee",
+        select: "employeeId firstName lastName department designation",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      })
+      .populate({
+        path: "leaveType",
+        select: "leaveCode leaveName isPaid",
+      })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const totalLeaves = await Leave.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalLeaves / limit),
+      totalLeaves,
+      leaves,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ===========================================
+// Get Leave By ID
+// ===========================================
+const getLeaveById = async (req, res, next) => {
+  try {
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Leave ID.",
+      });
+    }
+
+    const leave = await Leave.findById(req.params.id)
+      .populate({
+        path: "employee",
+        select: "employeeId firstName lastName designation department",
+        populate: {
+          path: "department",
+          select: "departmentCode departmentName",
+        },
+      })
+      .populate({
+        path: "leaveType",
+        select: "leaveCode leaveName maxDaysPerYear isPaid",
+      })
+      .populate({
+        path: "approvedBy",
+        select: "fullName email role",
+      });
+
+    if (!leave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      leave,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
+
 module.exports = {
   applyLeave,
+    getAllLeaves,
+    getLeaveById,
 };
