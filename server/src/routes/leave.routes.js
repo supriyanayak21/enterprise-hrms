@@ -5,7 +5,8 @@ const router = express.Router();
 const { applyLeave,
     getAllLeaves,
     getLeaveById,
-    updateLeave
+    updateLeave,
+    approveLeave
  } = require("../controllers/leave.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -41,5 +42,15 @@ router.put(
   authorizeRoles("Employee", "HR", "Admin"),
   updateLeave
 );
+
+router.put(
+    "/:id/approve",
+    protect,
+    authorizeRoles("Admin","HR"),
+    approveLeave
+);
+
+
+
 
 module.exports = router;

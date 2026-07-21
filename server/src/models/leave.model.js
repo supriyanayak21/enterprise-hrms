@@ -56,6 +56,11 @@ const leaveSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    approvalDate: {
+    type: Date,
+    default: null,
+    },
   },
   {
     timestamps: true,
