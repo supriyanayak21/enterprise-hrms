@@ -2,6 +2,7 @@ const Leave = require("../models/leave.model");
 const Employee = require("../models/employee.model");
 const LeaveType = require("../models/leaveType.model");
 const Counter = require("../models/counter.model");
+const mongoose = require("mongoose");
 
 // ==========================================
 // Apply Leave
@@ -641,6 +642,218 @@ const rejectLeave = async (req, res, next) => {
 };
 
 
+const getMyLeaveHistory = async (req, res, next) => {
+  try {
+    // Find employee linked to logged-in user
+    const employee = await Employee.findOne({ user: req.user._id });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee profile not found.",
+      });
+    }
+
+    // Query Params
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const sort = req.query.sort || "-createdAt";
+    const search = req.query.search || "";
+    const status = req.query.status;
+
+    // Build Filter
+    const filter = {
+      employee: employee._id,
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (search) {
+      const leaveTypes = await LeaveType.find({
+        leaveName: { $regex: search, $options: "i" },
+      }).select("_id");
+
+      filter.leaveType = {
+        $in: leaveTypes.map((item) => item._id),
+      };
+    }
+
+    const leaves = await Leave.find(filter)
+      .populate({
+        path: "leaveType",
+        select: "leaveCode leaveName isPaid",
+      })
+      .populate({
+        path: "approvedBy",
+        select: "fullName role",
+      })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Leave.countDocuments(filter);
+
+    const approved = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Approved",
+    });
+
+    const pending = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Pending",
+    });
+
+    const rejected = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Rejected",
+    });
+
+    res.status(200).json({
+      success: true,
+
+      summary: {
+        total,
+        approved,
+        pending,
+        rejected,
+      },
+
+      currentPage: page,
+
+      totalPages: Math.ceil(total / limit),
+
+      totalRecords: total,
+
+      leaveHistory: leaves,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const getEmployeeLeaveHistory = async (req, res, next) => {
+  try {
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.employeeId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Employee ID.",
+      });
+    }
+
+    const employee = await Employee.findById(req.params.employeeId)
+      .populate("department");
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found.",
+      });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const sort = req.query.sort || "-createdAt";
+
+    const search = req.query.search || "";
+
+    const status = req.query.status;
+
+    const filter = {
+      employee: employee._id,
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (search) {
+      const leaveTypes = await LeaveType.find({
+        leaveName: {
+          $regex: search,
+          $options: "i",
+        },
+      }).select("_id");
+
+      filter.leaveType = {
+        $in: leaveTypes.map((type) => type._id),
+      };
+    }
+
+    const leaveHistory = await Leave.find(filter)
+      .populate({
+        path: "leaveType",
+        select: "leaveCode leaveName isPaid",
+      })
+      .populate({
+        path: "approvedBy",
+        select: "fullName role",
+      })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Leave.countDocuments(filter);
+
+    const approved = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Approved",
+    });
+
+    const pending = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Pending",
+    });
+
+    const rejected = await Leave.countDocuments({
+      employee: employee._id,
+      status: "Rejected",
+    });
+
+    res.status(200).json({
+      success: true,
+
+      employee: {
+        employeeId: employee.employeeId,
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        designation: employee.designation,
+        department: employee.department,
+      },
+
+      summary: {
+        total,
+        approved,
+        pending,
+        rejected,
+      },
+
+      currentPage: page,
+
+      totalPages: Math.ceil(total / limit),
+
+      totalRecords: total,
+
+      leaveHistory,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 
 module.exports = {
   applyLeave,
@@ -649,4 +862,6 @@ module.exports = {
     updateLeave,
     approveLeave,
     rejectLeave,
+    getMyLeaveHistory,
+    getEmployeeLeaveHistory
 };

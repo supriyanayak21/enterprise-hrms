@@ -287,11 +287,14 @@ const deleteLeaveType = async (req, res, next) => {
 
 
 
+
+
 module.exports = {
   createLeaveType,
   getAllLeaveTypes,
   getLeaveTypeById,
   updateLeaveType,
     deleteLeaveType,
+    
 
 };

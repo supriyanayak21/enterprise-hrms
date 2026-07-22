@@ -7,7 +7,9 @@ const { applyLeave,
     getLeaveById,
     updateLeave,
     approveLeave,
-    rejectLeave
+    rejectLeave,
+    getMyLeaveHistory,
+    getEmployeeLeaveHistory
  } = require("../controllers/leave.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -57,6 +59,21 @@ router.put(
   authorizeRoles("Admin", "HR"),
   rejectLeave
 );
+
+router.get(
+  "/my-leaves",
+  protect,
+  authorizeRoles("Employee"),
+  getMyLeaveHistory
+);
+
+router.get(
+  "/employee/:employeeId",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getEmployeeLeaveHistory
+);
+
 
 
 module.exports = router;
