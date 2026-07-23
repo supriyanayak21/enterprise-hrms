@@ -853,6 +853,298 @@ const getEmployeeLeaveHistory = async (req, res, next) => {
 };
 
 
+const getLeaveDashboard = async (req, res, next) => {
+  try {
+
+    // ==========================================
+    // Leave Statistics
+    // ==========================================
+
+    const [
+      totalLeaves,
+      pendingLeaves,
+      approvedLeaves,
+      rejectedLeaves,
+    ] = await Promise.all([
+      Leave.countDocuments(),
+
+      Leave.countDocuments({
+        status: "Pending",
+      }),
+
+      Leave.countDocuments({
+        status: "Approved",
+      }),
+
+      Leave.countDocuments({
+        status: "Rejected",
+      }),
+    ]);
+
+    // ==========================================
+// Today's Leave
+// ==========================================
+
+const today = new Date();
+
+today.setHours(0, 0, 0, 0);
+
+const todayLeaves = await Leave.find({
+  status: "Approved",
+  startDate: { $lte: today },
+  endDate: { $gte: today },
+})
+.populate({
+  path: "employee",
+  select: "employeeId firstName lastName designation department",
+  populate: {
+    path: "department",
+    select: "departmentName departmentCode",
+  },
+})
+.populate({
+  path: "leaveType",
+  select: "leaveCode leaveName",
+});
+
+// ==========================================
+// Upcoming Leaves
+// ==========================================
+
+const nextWeek = new Date(today);
+
+nextWeek.setDate(today.getDate() + 7);
+
+const upcomingLeaves = await Leave.find({
+  status: "Approved",
+  startDate: {
+    $gt: today,
+    $lte: nextWeek,
+  },
+})
+.populate({
+  path: "employee",
+  select: "employeeId firstName lastName department",
+  populate: {
+    path: "department",
+    select: "departmentName",
+  },
+})
+.populate({
+  path: "leaveType",
+  select: "leaveCode leaveName",
+})
+.sort({
+  startDate: 1,
+});
+
+// ==========================================
+// Leave Type Distribution
+// ==========================================
+
+const leaveTypeDistribution = await Leave.aggregate([
+  {
+    $match: {
+      status: "Approved",
+    },
+  },
+  {
+    $lookup: {
+      from: "leavetypes",
+      localField: "leaveType",
+      foreignField: "_id",
+      as: "leaveType",
+    },
+  },
+  {
+    $unwind: "$leaveType",
+  },
+  {
+    $group: {
+      _id: "$leaveType.leaveName",
+      totalLeaves: {
+        $sum: 1,
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      leaveType: "$_id",
+      totalLeaves: 1,
+    },
+  },
+]);
+
+// ==========================================
+// Department-wise Leave Distribution
+// ==========================================
+
+const departmentWiseLeaves = await Leave.aggregate([
+  {
+    $match: {
+      status: "Approved",
+    },
+  },
+  {
+    $lookup: {
+      from: "employees",
+      localField: "employee",
+      foreignField: "_id",
+      as: "employee",
+    },
+  },
+  {
+    $unwind: "$employee",
+  },
+  {
+    $lookup: {
+      from: "departments",
+      localField: "employee.department",
+      foreignField: "_id",
+      as: "department",
+    },
+  },
+  {
+    $unwind: "$department",
+  },
+  {
+    $group: {
+      _id: "$department.departmentName",
+      totalLeaves: {
+        $sum: 1,
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      department: "$_id",
+      totalLeaves: 1,
+    },
+  },
+]);
+
+// ==========================================
+// Monthly Leave Trend
+// ==========================================
+
+const currentYear = new Date().getFullYear();
+
+const monthlyLeaveTrend = await Leave.aggregate([
+  {
+    $match: {
+      createdAt: {
+        $gte: new Date(`${currentYear}-01-01`),
+        $lt: new Date(`${currentYear + 1}-01-01`)
+      }
+    }
+  },
+
+  {
+    $group: {
+      _id: {
+        month: {
+          $month: "$createdAt"
+        }
+      },
+
+      totalLeaves: {
+        $sum: 1
+      }
+    }
+  },
+
+  {
+    $sort: {
+      "_id.month": 1
+    }
+  },
+
+  {
+    $project: {
+      _id: 0,
+      month: "$_id.month",
+      totalLeaves: 1
+    }
+  }
+]);
+
+const months = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
+
+const monthlyTrend = monthlyLeaveTrend.map(item => ({
+  month: months[item.month],
+  totalLeaves: item.totalLeaves
+}));
+
+// ==========================================
+// Recent Leave Requests
+// ==========================================
+
+const recentLeaveRequests = await Leave.find()
+
+.populate({
+  path: "employee",
+  select: "employeeId firstName lastName"
+})
+
+.populate({
+  path: "leaveType",
+  select: "leaveName leaveCode"
+})
+
+.sort({
+  createdAt: -1
+})
+
+.limit(5);
+
+
+
+      res.status(200).json({
+      success: true,
+
+    statistics: {
+    totalLeaves,
+    pendingLeaves,
+    approvedLeaves,
+    rejectedLeaves,
+     },
+
+    todayLeaves,
+
+    upcomingLeaves,
+
+    leaveTypeDistribution,
+
+    departmentWiseLeaves,
+
+    monthlyTrend,
+
+    recentLeaveRequests
+   });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 
 
 module.exports = {
@@ -863,5 +1155,6 @@ module.exports = {
     approveLeave,
     rejectLeave,
     getMyLeaveHistory,
-    getEmployeeLeaveHistory
+    getEmployeeLeaveHistory,
+    getLeaveDashboard,
 };

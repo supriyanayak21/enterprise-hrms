@@ -9,7 +9,8 @@ const { applyLeave,
     approveLeave,
     rejectLeave,
     getMyLeaveHistory,
-    getEmployeeLeaveHistory
+    getEmployeeLeaveHistory,
+    getLeaveDashboard
  } = require("../controllers/leave.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -74,6 +75,11 @@ router.get(
   getEmployeeLeaveHistory
 );
 
-
+router.get(
+  "/dashboard",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getLeaveDashboard
+);
 
 module.exports = router;
