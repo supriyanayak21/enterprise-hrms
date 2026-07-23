@@ -1,6 +1,7 @@
 const LeaveBalance = require("../models/leaveBalance.model");
 const Employee = require("../models/employee.model");
 const LeaveType = require("../models/leaveType.model");
+const mongoose = require("mongoose");
 
 const createLeaveBalance = async (data) => {
 
@@ -157,9 +158,40 @@ const getAllLeaveBalances = async (query) => {
 
 
 
+const getLeaveBalanceById = async (id) => {
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid leave balance ID.");
+  }
+
+  const leaveBalance = await LeaveBalance.findById(id)
+    .populate({
+      path: "employee",
+      select: "employeeId firstName lastName email designation department",
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+    .populate({
+      path: "leaveType",
+      select: "leaveCode leaveName maxDaysPerYear isPaid",
+    });
+
+  if (!leaveBalance) {
+    throw new Error("Leave balance not found.");
+  }
+
+  return leaveBalance;
+};
+
+
+
 module.exports = {
 
     createLeaveBalance,
-    getAllLeaveBalances
+    getAllLeaveBalances,
+    getLeaveBalanceById,
 
 };

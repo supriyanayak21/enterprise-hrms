@@ -32,7 +32,24 @@ const getAllLeaveBalances = async (req, res, next) => {
 };
 
 
+const getLeaveBalanceById = async (req, res, next) => {
+  try {
+    const leaveBalance = await LeaveBalanceService.getLeaveBalanceById(
+      req.params.id
+    );
+
+    res.status(200).json({
+      success: true,
+      leaveBalance,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createLeaveBalance,
-    getAllLeaveBalances
+    getAllLeaveBalances,
+    getLeaveBalanceById,
 };

@@ -5,7 +5,8 @@ const protect = require("../middleware/auth.middleware");
 const authorizeRoles = require("../middleware/role.middleware");
 
 const { createLeaveBalance,
-    getAllLeaveBalances
+    getAllLeaveBalances,
+    getLeaveBalanceById
 } = require("../controllers/leaveBalance.controller");
 
 
@@ -24,7 +25,12 @@ router.get(
     getAllLeaveBalances
 );
 
-
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getLeaveBalanceById
+);
 
 
 module.exports = router;
