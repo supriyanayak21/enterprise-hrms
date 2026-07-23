@@ -74,8 +74,92 @@ const createLeaveBalance = async (data) => {
     return leaveBalance;
 };
 
+const getAllLeaveBalances = async (query) => {
+
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    year,
+    leaveType,
+    department,
+    sortBy = "createdAt",
+    order = "desc",
+  } = query;
+
+  const currentPage = Number(page);
+  const pageSize = Number(limit);
+
+  // Build employee filter
+  const employeeFilter = {};
+
+  if (search) {
+    employeeFilter.$or = [
+      { employeeId: { $regex: search, $options: "i" } },
+      { firstName: { $regex: search, $options: "i" } },
+      { lastName: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  if (department) {
+    employeeFilter.department = department;
+  }
+
+  const employees = await Employee.find(employeeFilter).select("_id");
+
+  const employeeIds = employees.map((emp) => emp._id);
+
+  // Leave Balance filter
+  const filter = {};
+
+  if (employeeIds.length > 0 || search) {
+    filter.employee = { $in: employeeIds };
+  }
+
+  if (year) {
+    filter.year = Number(year);
+  }
+
+  if (leaveType) {
+    filter.leaveType = leaveType;
+  }
+
+  const totalRecords = await LeaveBalance.countDocuments(filter);
+
+  const leaveBalances = await LeaveBalance.find(filter)
+    .populate({
+      path: "employee",
+      select: "employeeId firstName lastName department",
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+    .populate({
+      path: "leaveType",
+      select: "leaveCode leaveName",
+    })
+    .sort({
+      [sortBy]: order === "asc" ? 1 : -1,
+    })
+    .skip((currentPage - 1) * pageSize)
+    .limit(pageSize);
+
+  return {
+    totalRecords,
+    currentPage,
+    totalPages: Math.ceil(totalRecords / pageSize),
+    pageSize,
+    leaveBalances,
+  };
+};
+
+
+
+
 module.exports = {
 
     createLeaveBalance,
+    getAllLeaveBalances
 
 };

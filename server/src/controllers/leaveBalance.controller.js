@@ -17,6 +17,22 @@ const createLeaveBalance = async (req, res, next) => {
   }
 };
 
+
+const getAllLeaveBalances = async (req, res, next) => {
+  try {
+    const result = await LeaveBalanceService.getAllLeaveBalances(req.query);
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createLeaveBalance,
+    getAllLeaveBalances
 };
