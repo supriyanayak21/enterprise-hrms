@@ -225,11 +225,40 @@ const getEmployeeLeaveBalances = async (employeeId) => {
 };
 
 
+
+const getMyLeaveBalance = async (userId) => {
+
+  // Find employee linked to logged-in user
+  const employee = await Employee.findOne({
+    user: userId,
+  });
+
+  if (!employee) {
+    throw new Error("Employee profile not found.");
+  }
+
+  // Get leave balances
+  const leaveBalances = await LeaveBalance.find({
+    employee: employee._id,
+  })
+    .populate({
+      path: "leaveType",
+      select: "leaveCode leaveName maxDaysPerYear isPaid",
+    })
+    .sort({
+      createdAt: -1,
+    });
+
+  return leaveBalances;
+};
+
+
 module.exports = {
 
     createLeaveBalance,
     getAllLeaveBalances,
     getLeaveBalanceById,
     getEmployeeLeaveBalances,
+    getMyLeaveBalance,
 
 };

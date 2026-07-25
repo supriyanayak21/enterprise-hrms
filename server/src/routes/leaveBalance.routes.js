@@ -7,7 +7,8 @@ const authorizeRoles = require("../middleware/role.middleware");
 const { createLeaveBalance,
     getAllLeaveBalances,
     getLeaveBalanceById,
-    getEmployeeLeaveBalances
+    getEmployeeLeaveBalances,
+    getMyLeaveBalance
 } = require("../controllers/leaveBalance.controller");
 
 
@@ -27,10 +28,10 @@ router.get(
 );
 
 router.get(
-  "/:id",
+  "/my-balance",
   protect,
-  authorizeRoles("Admin", "HR"),
-  getLeaveBalanceById
+  authorizeRoles("Employee"),
+  getMyLeaveBalance
 );
 
 router.get(
@@ -39,6 +40,17 @@ router.get(
   authorizeRoles("Admin", "HR"),
   getEmployeeLeaveBalances
 );
+
+
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getLeaveBalanceById
+);
+
+
+
 
 
 module.exports = router;
