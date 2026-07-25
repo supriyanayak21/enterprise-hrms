@@ -187,11 +187,49 @@ const getLeaveBalanceById = async (id) => {
 };
 
 
+const getEmployeeLeaveBalances = async (employeeId) => {
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+    throw new Error("Invalid employee ID.");
+  }
+
+  // Check employee exists
+  const employee = await Employee.findById(employeeId);
+
+  if (!employee) {
+    throw new Error("Employee not found.");
+  }
+
+  // Get leave balances
+  const leaveBalances = await LeaveBalance.find({
+    employee: employeeId,
+  })
+    .populate({
+      path: "employee",
+      select: "employeeId firstName lastName designation department",
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+    .populate({
+      path: "leaveType",
+      select: "leaveCode leaveName maxDaysPerYear isPaid",
+    })
+    .sort({
+      createdAt: -1,
+    });
+
+  return leaveBalances;
+};
+
 
 module.exports = {
 
     createLeaveBalance,
     getAllLeaveBalances,
     getLeaveBalanceById,
+    getEmployeeLeaveBalances,
 
 };
