@@ -102,6 +102,21 @@ const updateLeaveBalance = async (req, res, next) => {
   }
 };
 
+const deleteLeaveBalance = async (req, res, next) => {
+  try {
+
+    await LeaveBalanceService.deleteLeaveBalance(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Leave balance deleted successfully.",
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 module.exports = {
   createLeaveBalance,
@@ -110,4 +125,5 @@ module.exports = {
     getEmployeeLeaveBalances,
     getMyLeaveBalance,
   updateLeaveBalance,
+  deleteLeaveBalance,
 };

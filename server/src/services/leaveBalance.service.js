@@ -1,6 +1,7 @@
 const LeaveBalance = require("../models/leaveBalance.model");
 const Employee = require("../models/employee.model");
 const LeaveType = require("../models/leaveType.model");
+const Leave = require("../models/leave.model");
 const mongoose = require("mongoose");
 
 const createLeaveBalance = async (data) => {
@@ -388,6 +389,62 @@ const updateLeaveBalance = async (id, data) => {
 
 };
 
+
+const deleteLeaveBalance = async (id) => {
+
+  // ==========================================
+  // Validate Leave Balance ID
+  // ==========================================
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid leave balance ID.");
+  }
+
+  // ==========================================
+  // Find Leave Balance
+  // ==========================================
+
+  const leaveBalance = await LeaveBalance.findById(id);
+
+  if (!leaveBalance) {
+    throw new Error("Leave balance not found.");
+  }
+
+  // ==========================================
+  // Prevent deletion if leave has been used
+  // ==========================================
+
+  if (leaveBalance.usedLeave > 0) {
+    throw new Error(
+      "Cannot delete leave balance because leave has already been used."
+    );
+  }
+
+  // ==========================================
+  // Check Approved Leave Requests
+  // ==========================================
+
+  const approvedLeave = await Leave.findOne({
+    employee: leaveBalance.employee,
+    leaveType: leaveBalance.leaveType,
+    status: "Approved",
+    year: leaveBalance.year,
+  });
+
+  if (approvedLeave) {
+    throw new Error(
+      "Cannot delete leave balance because approved leave requests exist."
+    );
+  }
+
+  // ==========================================
+  // Delete
+  // ==========================================
+
+  await leaveBalance.deleteOne();
+
+  return true;
+};
 
 
 
