@@ -253,6 +253,145 @@ const getMyLeaveBalance = async (userId) => {
 };
 
 
+const updateLeaveBalance = async (id, data) => {
+
+  // ==========================================
+  // Validate Leave Balance ID
+  // ==========================================
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid leave balance ID.");
+  }
+
+  // ==========================================
+  // Check Leave Balance Exists
+  // ==========================================
+
+  const leaveBalance = await LeaveBalance.findById(id);
+
+  if (!leaveBalance) {
+    throw new Error("Leave balance not found.");
+  }
+
+  // ==========================================
+  // Extract Request Data
+  // ==========================================
+
+  let {
+    employee,
+    leaveType,
+    allocatedLeave,
+    usedLeave,
+    year,
+  } = data;
+
+  // Keep existing values if not provided
+
+  employee = employee || leaveBalance.employee;
+  leaveType = leaveType || leaveBalance.leaveType;
+  year = year || leaveBalance.year;
+
+  allocatedLeave =
+    allocatedLeave !== undefined
+      ? allocatedLeave
+      : leaveBalance.allocatedLeave;
+
+  usedLeave =
+    usedLeave !== undefined
+      ? usedLeave
+      : leaveBalance.usedLeave;
+
+  // ==========================================
+  // Validate Employee
+  // ==========================================
+
+  const employeeExists = await Employee.findById(employee);
+
+  if (!employeeExists) {
+    throw new Error("Employee not found.");
+  }
+
+  // ==========================================
+  // Validate Leave Type
+  // ==========================================
+
+  const leaveTypeExists = await LeaveType.findById(leaveType);
+
+  if (!leaveTypeExists) {
+    throw new Error("Leave type not found.");
+  }
+
+  // ==========================================
+  // Duplicate Check
+  // ==========================================
+
+  const duplicate = await LeaveBalance.findOne({
+    employee,
+    leaveType,
+    year,
+    _id: { $ne: id },
+  });
+
+  if (duplicate) {
+    throw new Error(
+      "Leave balance already exists for this employee and leave type."
+    );
+  }
+
+  // ==========================================
+  // Business Validation
+  // ==========================================
+
+  if (usedLeave > allocatedLeave) {
+    throw new Error(
+      "Used leave cannot exceed allocated leave."
+    );
+  }
+
+  // ==========================================
+  // Auto Calculate Remaining Leave
+  // ==========================================
+
+  const remainingLeave =
+    allocatedLeave - usedLeave;
+
+  // ==========================================
+  // Update Record
+  // ==========================================
+
+  leaveBalance.employee = employee;
+  leaveBalance.leaveType = leaveType;
+  leaveBalance.year = year;
+  leaveBalance.allocatedLeave = allocatedLeave;
+  leaveBalance.usedLeave = usedLeave;
+  leaveBalance.remainingLeave = remainingLeave;
+
+  await leaveBalance.save();
+
+  // ==========================================
+  // Return Updated Record
+  // ==========================================
+
+  return await LeaveBalance.findById(id)
+    .populate({
+      path: "employee",
+      select: "employeeId firstName lastName department",
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+    .populate({
+      path: "leaveType",
+      select: "leaveCode leaveName maxDaysPerYear isPaid",
+    });
+
+};
+
+
+
+
+
 module.exports = {
 
     createLeaveBalance,
@@ -260,5 +399,6 @@ module.exports = {
     getLeaveBalanceById,
     getEmployeeLeaveBalances,
     getMyLeaveBalance,
+    updateLeaveBalance,
 
 };

@@ -8,7 +8,8 @@ const { createLeaveBalance,
     getAllLeaveBalances,
     getLeaveBalanceById,
     getEmployeeLeaveBalances,
-    getMyLeaveBalance
+    getMyLeaveBalance,
+    updateLeaveBalance
 } = require("../controllers/leaveBalance.controller");
 
 
@@ -49,6 +50,12 @@ router.get(
   getLeaveBalanceById
 );
 
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  updateLeaveBalance
+);
 
 
 
