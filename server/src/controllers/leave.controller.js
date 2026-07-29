@@ -3,6 +3,7 @@ const Employee = require("../models/employee.model");
 const LeaveType = require("../models/leaveType.model");
 const Counter = require("../models/counter.model");
 const mongoose = require("mongoose");
+const LeaveBalance = require("../models/leaveBalance.model");
 
 // ==========================================
 // Apply Leave
@@ -464,9 +465,36 @@ const approveLeave = async (req, res, next) => {
         message: "Cannot approve an inactive leave type.",
       });
     }
+     // ==========================================
+// 6. Validate Leave Balance
+// ==========================================
 
+// Extract leave year
+const leaveYear = new Date(leave.startDate).getFullYear();
+
+// Find leave balance
+const leaveBalance = await LeaveBalance.findOne({
+  employee: leave.employee,
+  leaveType: leave.leaveType,
+  year: leaveYear,
+});
+
+if (!leaveBalance) {
+  return res.status(404).json({
+    success: false,
+    message: "Leave balance not found for this employee.",
+  });
+}
+
+// Check sufficient leave balance
+if (leaveBalance.remainingLeave < leave.totalDays) {
+  return res.status(400).json({
+    success: false,
+    message: `Insufficient leave balance. Remaining leave: ${leaveBalance.remainingLeave}`,
+  });
+}
     // ==========================================
-    // 6. Approve Leave
+    // 7. Approve Leave
     // ==========================================
 
     leave.status = "Approved";
@@ -475,11 +503,21 @@ const approveLeave = async (req, res, next) => {
     leave.remarks = req.body.remarks || "";
 
     await leave.save();
+    
+   // ==========================================
+// 8. Update Leave Balance
+// ==========================================
+
+   leaveBalance.usedLeave += leave.totalDays;
+   leaveBalance.remainingLeave =
+   leaveBalance.allocatedLeave - leaveBalance.usedLeave;
+
+    await leaveBalance.save();
 
     // ==========================================
-    // 7. Return Response
+    // 9. Return Response
     // ==========================================
-
+    
     const approvedLeave = await Leave.findById(leave._id)
       .populate({
         path: "employee",
