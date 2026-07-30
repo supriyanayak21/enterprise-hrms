@@ -388,8 +388,10 @@ const updateLeave = async (req, res, next) => {
 
 
 const approveLeave = async (req, res, next) => {
+   
   try {
-
+    
+    
     // ==========================================
     // 1. Validate Leave Request ID
     // ==========================================
@@ -431,6 +433,7 @@ const approveLeave = async (req, res, next) => {
 
     const employee = await Employee.findById(leave.employee)
       .populate("department");
+      
 
     if (!employee) {
       return res.status(404).json({
@@ -513,6 +516,7 @@ if (leaveBalance.remainingLeave < leave.totalDays) {
    leaveBalance.allocatedLeave - leaveBalance.usedLeave;
 
     await leaveBalance.save();
+    
 
     // ==========================================
     // 9. Return Response
@@ -543,6 +547,8 @@ if (leaveBalance.remainingLeave < leave.totalDays) {
     });
 
   } catch (error) {
+     
+
     next(error);
   }
 };
