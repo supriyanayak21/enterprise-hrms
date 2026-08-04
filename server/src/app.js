@@ -13,7 +13,7 @@ const leaveTypeRoutes = require("./routes/leaveType.routes");
 const leaveRoutes = require("./routes/leave.routes");
 const leaveBalanceRoutes = require("./routes/leaveBalance.routes");
 const salaryStructureRoutes = require("./routes/salaryStructure.routes");
-
+const payrollRoutes = require("./routes/payroll.routes");
 
 
 
@@ -31,6 +31,7 @@ app.use("/api/v1/leaves", leaveRoutes);
 //app.use("/api/v1/leave-balances", leaveBalanceRoutes);
 app.use("/api/v1/leave-balances", leaveBalanceRoutes);
 app.use("/api/v1/salary-structures", salaryStructureRoutes);
+
 
 
 
