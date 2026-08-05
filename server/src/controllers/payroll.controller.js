@@ -34,7 +34,26 @@ const getAllPayrolls = async (req, res, next) => {
   }
 };
 
+
+const getPayrollById = async (req, res, next) => {
+  try {
+
+    const payroll = await PayrollService.getPayrollById(
+      req.params.id
+    );
+
+    res.status(200).json({
+      success: true,
+      payroll,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   generatePayroll,
   getAllPayrolls,
+  getPayrollById,
 };

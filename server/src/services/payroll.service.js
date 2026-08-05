@@ -164,10 +164,54 @@ const getAllPayrolls = async (query) => {
     };
 };
 
+const getPayrollById = async (payrollId) => {
 
+  // ==========================================
+  // Validate Payroll ID
+  // ==========================================
+
+  if (!mongoose.Types.ObjectId.isValid(payrollId)) {
+    throw new Error("Invalid payroll ID.");
+  }
+
+  // ==========================================
+  // Find Payroll
+  // ==========================================
+
+  const payroll = await Payroll.findById(payrollId)
+
+    .populate({
+      path: "employee",
+      select:
+        "employeeId firstName lastName email designation department",
+
+      populate: {
+        path: "department",
+        select: "departmentCode departmentName",
+      },
+    })
+
+    .populate("salaryStructure")
+
+    .populate(
+      "generatedBy",
+      "fullName email role"
+    );
+
+  // ==========================================
+  // Payroll Not Found
+  // ==========================================
+
+  if (!payroll) {
+    throw new Error("Payroll not found.");
+  }
+
+  return payroll;
+};
 
 
 module.exports = {
   generatePayroll,
     getAllPayrolls,
+    getPayrollById,
 };

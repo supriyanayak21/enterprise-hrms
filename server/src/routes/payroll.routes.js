@@ -5,6 +5,7 @@ const router = express.Router();
 const {
   generatePayroll,
   getAllPayrolls,
+  getPayrollById,
 } = require("../controllers/payroll.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -22,6 +23,13 @@ router.get(
   protect,
   authorizeRoles("Admin", "HR"),
   getAllPayrolls
+);
+
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("Admin", "HR"),
+  getPayrollById
 );
 
 module.exports = router;
