@@ -67,6 +67,107 @@ if (!salaryStructure) {
 
 };
 
+
+const getAllPayrolls = async (query) => {
+
+    const {
+        page = 1,
+        limit = 10,
+        month,
+        year,
+        paymentStatus,
+        employeeId,
+        sortBy = "createdAt",
+        order = "desc"
+    } = query;
+
+    const filter = {};
+
+    if (month) {
+        filter.month = Number(month);
+    }
+
+    if (year) {
+        filter.year = Number(year);
+    }
+
+    if (paymentStatus) {
+        filter.paymentStatus = paymentStatus;
+    }
+
+    // Employee ID Filter
+    if (employeeId) {
+
+        const employee = await Employee.findOne({
+            employeeId
+        });
+
+        if (employee) {
+            filter.employee = employee._id;
+        } else {
+            return {
+                totalPayrolls: 0,
+                totalPages: 0,
+                currentPage: Number(page),
+                payrolls: [],
+            };
+        }
+    }
+
+    const totalPayrolls =
+        await Payroll.countDocuments(filter);
+
+    const payrolls =
+        await Payroll.find(filter)
+
+        .populate({
+            path: "employee",
+            select:
+                "employeeId firstName lastName designation department",
+
+            populate: {
+                path: "department",
+                select:
+                    "departmentCode departmentName",
+            },
+        })
+
+        .populate(
+            "salaryStructure"
+        )
+
+        .populate(
+            "generatedBy",
+            "fullName email role"
+        )
+
+        .sort({
+            [sortBy]:
+                order === "asc" ? 1 : -1,
+        })
+
+        .skip((page - 1) * limit)
+
+        .limit(Number(limit));
+
+    return {
+
+        totalPayrolls,
+
+        totalPages: Math.ceil(
+            totalPayrolls / limit
+        ),
+
+        currentPage: Number(page),
+
+        payrolls,
+    };
+};
+
+
+
+
 module.exports = {
   generatePayroll,
+    getAllPayrolls,
 };

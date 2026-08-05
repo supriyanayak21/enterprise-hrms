@@ -19,6 +19,22 @@ const generatePayroll = async (req, res, next) => {
   }
 };
 
+const getAllPayrolls = async (req, res, next) => {
+  try {
+
+    const result = await PayrollService.getAllPayrolls(req.query);
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   generatePayroll,
+  getAllPayrolls,
 };
