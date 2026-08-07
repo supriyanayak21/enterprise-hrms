@@ -210,8 +210,158 @@ const getPayrollById = async (payrollId) => {
 };
 
 
+const getEmployeePayrollHistory = async (employeeId, query) => {
+
+  // ==========================================
+  // 1. Validate Employee ID
+  // ==========================================
+
+  if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+    throw new Error("Invalid employee ID.");
+  }
+
+  // ==========================================
+  // 2. Validate Employee
+  // ==========================================
+
+  const employee = await Employee.findById(employeeId)
+    .populate({
+      path: "department",
+      select: "departmentCode departmentName",
+    });
+
+  if (!employee) {
+    throw new Error("Employee not found.");
+  }
+
+  // ==========================================
+  // 3. Pagination
+  // ==========================================
+
+  const page = Math.max(Number(query.page) || 1, 1);
+
+  const limit = Math.min(
+    Math.max(Number(query.limit) || 10, 1),
+    100
+  );
+
+  const skip = (page - 1) * limit;
+
+  // ==========================================
+  // 4. Filters
+  // ==========================================
+
+  const filter = {
+    employee: employeeId,
+  };
+
+  if (query.month) {
+
+    const month = Number(query.month);
+
+    if (month < 1 || month > 12) {
+      throw new Error("Invalid payroll month.");
+    }
+
+    filter.month = month;
+  }
+
+  if (query.year) {
+
+    const year = Number(query.year);
+
+    if (year < 2000 || year > 2100) {
+      throw new Error("Invalid payroll year.");
+    }
+
+    filter.year = year;
+  }
+
+  if (query.paymentStatus) {
+
+    const allowedStatuses = [
+      "Pending",
+      "Processed",
+      "Paid",
+    ];
+
+    if (!allowedStatuses.includes(query.paymentStatus)) {
+      throw new Error("Invalid payment status.");
+    }
+
+    filter.paymentStatus = query.paymentStatus;
+  }
+
+  // ==========================================
+  // 5. Count Payrolls
+  // ==========================================
+
+  const totalPayrolls =
+    await Payroll.countDocuments(filter);
+
+  // ==========================================
+  // 6. Fetch Payroll History
+  // ==========================================
+
+  const payrolls = await Payroll.find(filter)
+    .populate({
+      path: "employee",
+      select:
+        "employeeId firstName lastName designation department",
+      populate: {
+        path: "department",
+        select:
+          "departmentCode departmentName",
+      },
+    })
+    .populate({
+      path: "salaryStructure",
+      select:
+        "basicSalary hra da specialAllowance travelAllowance medicalAllowance grossSalary totalDeductions netSalary",
+    })
+    .populate({
+      path: "generatedBy",
+      select: "fullName email role",
+    })
+    .sort({
+      year: -1,
+      month: -1,
+    })
+    .skip(skip)
+    .limit(limit);
+
+  // ==========================================
+  // 7. Return Result
+  // ==========================================
+
+  return {
+    employee: {
+      _id: employee._id,
+      employeeId: employee.employeeId,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      designation: employee.designation,
+      department: employee.department,
+    },
+
+    totalPayrolls,
+
+    currentPage: page,
+
+    totalPages: Math.ceil(
+      totalPayrolls / limit
+    ),
+
+    payrolls,
+  };
+};
+
+
 module.exports = {
   generatePayroll,
     getAllPayrolls,
     getPayrollById,
+    getEmployeePayrollHistory
+
+    
 };
