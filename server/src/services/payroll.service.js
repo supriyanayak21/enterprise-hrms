@@ -357,11 +357,187 @@ const getEmployeePayrollHistory = async (employeeId, query) => {
 };
 
 
+const getMyPayslips = async (user, query) => {
+
+  // ==========================================
+  // 1. Validate Logged-in User
+  // ==========================================
+
+  if (!user || !user._id) {
+    throw new Error("Unauthorized user.");
+  }
+
+  // ==========================================
+  // 2. Find Employee
+  // ==========================================
+
+  const employee = await Employee.findOne({
+    user: user._id,
+  }).populate({
+    path: "department",
+    select: "departmentCode departmentName",
+  });
+
+  if (!employee) {
+    throw new Error(
+      "Employee profile not found for this user."
+    );
+  }
+
+  // ==========================================
+  // 3. Pagination
+  // ==========================================
+
+  const page = Math.max(
+    Number(query.page) || 1,
+    1
+  );
+
+  const limit = Math.min(
+    Math.max(Number(query.limit) || 10, 1),
+    100
+  );
+
+  const skip = (page - 1) * limit;
+
+  // ==========================================
+  // 4. Build Filter
+  // ==========================================
+
+  const filter = {
+    employee: employee._id,
+  };
+
+  // ==========================================
+  // 5. Month Filter
+  // ==========================================
+
+  if (query.month) {
+
+    const month = Number(query.month);
+
+    if (month < 1 || month > 12) {
+      throw new Error("Invalid payroll month.");
+    }
+
+    filter.month = month;
+  }
+
+  // ==========================================
+  // 6. Year Filter
+  // ==========================================
+
+  if (query.year) {
+
+    const year = Number(query.year);
+
+    if (year < 2000 || year > 2100) {
+      throw new Error("Invalid payroll year.");
+    }
+
+    filter.year = year;
+  }
+
+  // ==========================================
+  // 7. Payment Status Filter
+  // ==========================================
+
+  if (query.paymentStatus) {
+
+    const allowedStatuses = [
+      "Pending",
+      "Processed",
+      "Paid",
+    ];
+
+    if (
+      !allowedStatuses.includes(
+        query.paymentStatus
+      )
+    ) {
+      throw new Error(
+        "Invalid payment status."
+      );
+    }
+
+    filter.paymentStatus =
+      query.paymentStatus;
+  }
+
+  // ==========================================
+  // 8. Count Payslips
+  // ==========================================
+
+  const totalPayslips =
+    await Payroll.countDocuments(filter);
+
+  // ==========================================
+  // 9. Fetch Payslips
+  // ==========================================
+
+  const payslips = await Payroll.find(filter)
+
+    .populate({
+      path: "employee",
+      select:
+        "employeeId firstName lastName designation department",
+
+      populate: {
+        path: "department",
+        select:
+          "departmentCode departmentName",
+      },
+    })
+
+    .populate({
+      path: "salaryStructure",
+      select:
+        "basicSalary hra da specialAllowance travelAllowance medicalAllowance grossSalary totalDeductions netSalary",
+    })
+
+    .sort({
+      year: -1,
+      month: -1,
+    })
+
+    .skip(skip)
+
+    .limit(limit);
+
+  // ==========================================
+  // 10. Return Payslips
+  // ==========================================
+
+  return {
+
+    employee: {
+      _id: employee._id,
+      employeeId: employee.employeeId,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      designation: employee.designation,
+      department: employee.department,
+    },
+
+    totalPayslips,
+
+    currentPage: page,
+
+    totalPages: Math.ceil(
+      totalPayslips / limit
+    ),
+
+    payslips,
+  };
+};
+
+
 module.exports = {
   generatePayroll,
     getAllPayrolls,
     getPayrollById,
-    getEmployeePayrollHistory
+    getEmployeePayrollHistory,
+    getMyPayslips
 
     
 };

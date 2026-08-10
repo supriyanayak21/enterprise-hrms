@@ -6,7 +6,8 @@ const {
   generatePayroll,
   getAllPayrolls,
   getPayrollById,
-  getEmployeePayrollHistory
+  getEmployeePayrollHistory,
+  getMyPayslips
 } = require("../controllers/payroll.controller");
 
 const protect = require("../middleware/auth.middleware");
@@ -31,6 +32,13 @@ router.get(
   protect,
   authorizeRoles("Admin", "HR"),
   getEmployeePayrollHistory
+);
+
+router.get(
+  "/my-payslips",
+  protect,
+  authorizeRoles("Employee"),
+  getMyPayslips
 );
 
 router.get(
