@@ -87,10 +87,32 @@ const getMyPayslips = async (req, res, next) => {
   }
 };
 
+const updatePayroll = async (req, res, next) => {
+  try {
+
+    const payroll = await PayrollService.updatePayroll(
+      req.params.id,
+      req.body,
+      req.user
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payroll updated successfully.",
+      payroll,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   generatePayroll,
   getAllPayrolls,
   getPayrollById,
   getEmployeePayrollHistory,
-  getMyPayslips
+  getMyPayslips,
+  updatePayroll
 };

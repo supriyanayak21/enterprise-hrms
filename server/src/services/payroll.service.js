@@ -532,12 +532,183 @@ const getMyPayslips = async (user, query) => {
 };
 
 
+const updatePayroll = async (payrollId, data, user) => {
+
+  // ==========================================
+  // 1. Validate Payroll ID
+  // ==========================================
+
+  if (!mongoose.Types.ObjectId.isValid(payrollId)) {
+    throw new Error("Invalid payroll ID.");
+  }
+
+  // ==========================================
+  // 2. Find Payroll
+  // ==========================================
+
+  const payroll = await Payroll.findById(payrollId);
+
+  if (!payroll) {
+    throw new Error("Payroll not found.");
+  }
+
+  // ==========================================
+  // 3. Prevent Updating Paid Payroll
+  // ==========================================
+
+  if (payroll.paymentStatus === "Paid") {
+    throw new Error(
+      "Paid payroll cannot be modified."
+    );
+  }
+
+  // ==========================================
+  // 4. Allowed Fields
+  // ==========================================
+
+  const allowedFields = [
+    "workingDays",
+    "presentDays",
+    "paidLeaveDays",
+    "unpaidLeaveDays",
+    "overtimeHours",
+    "grossSalary",
+    "totalDeductions",
+    "netSalary",
+    "remarks",
+  ];
+
+  // ==========================================
+  // 5. Update Only Allowed Fields
+  // ==========================================
+
+  allowedFields.forEach((field) => {
+
+    if (data[field] !== undefined) {
+      payroll[field] = data[field];
+    }
+
+  });
+
+  // ==========================================
+  // 6. Validate Numeric Values
+  // ==========================================
+
+  const numericFields = [
+    "workingDays",
+    "presentDays",
+    "paidLeaveDays",
+    "unpaidLeaveDays",
+    "overtimeHours",
+    "grossSalary",
+    "totalDeductions",
+    "netSalary",
+  ];
+
+  for (const field of numericFields) {
+
+    if (
+      payroll[field] !== undefined &&
+      payroll[field] < 0
+    ) {
+      throw new Error(
+        `${field} cannot be negative.`
+      );
+    }
+
+  }
+
+  // ==========================================
+  // 7. Validate Attendance
+  // ==========================================
+
+  if (
+    payroll.presentDays >
+    payroll.workingDays
+  ) {
+    throw new Error(
+      "Present days cannot exceed working days."
+    );
+  }
+
+  // ==========================================
+  // 8. Validate Leave Days
+  // ==========================================
+
+  if (
+    payroll.paidLeaveDays +
+    payroll.unpaidLeaveDays >
+    payroll.workingDays
+  ) {
+    throw new Error(
+      "Total leave days cannot exceed working days."
+    );
+  }
+
+  // ==========================================
+  // 9. Validate Salary Calculation
+  // ==========================================
+
+  const calculatedNetSalary =
+    payroll.grossSalary -
+    payroll.totalDeductions;
+
+  if (
+    Math.abs(
+      calculatedNetSalary -
+      payroll.netSalary
+    ) > 0.01
+  ) {
+    throw new Error(
+      "Net salary must equal gross salary minus total deductions."
+    );
+  }
+
+  // ==========================================
+  // 10. Save
+  // ==========================================
+
+  await payroll.save();
+
+  // ==========================================
+  // 11. Return Populated Payroll
+  // ==========================================
+
+  const updatedPayroll =
+    await Payroll.findById(payroll._id)
+
+      .populate({
+        path: "employee",
+        select:
+          "employeeId firstName lastName designation department",
+
+        populate: {
+          path: "department",
+          select:
+            "departmentCode departmentName",
+        },
+      })
+
+      .populate({
+        path: "salaryStructure",
+      })
+
+      .populate({
+        path: "generatedBy",
+        select: "fullName email role",
+      });
+
+  return updatedPayroll;
+};
+
+
 module.exports = {
   generatePayroll,
     getAllPayrolls,
     getPayrollById,
     getEmployeePayrollHistory,
-    getMyPayslips
+    getMyPayslips,
+    updatePayroll
 
     
 };
